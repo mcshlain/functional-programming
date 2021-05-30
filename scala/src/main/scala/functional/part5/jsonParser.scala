@@ -29,7 +29,7 @@ object jsonParser {
 
   // with a recursive definition the compiler needs the value to have a type definition
   val array: Parser[JsonArray] =
-    (str("[") >> (primitiveValue | array).zeroOrMoreTimes(delimiter=",") << str("]")).map(JsonArray(_))
+    (str("[") >> (primitiveValue | array | objectP).zeroOrMoreTimes(delimiter=",") << str("]")).map(JsonArray(_))
 
   array.run(Location("[]"))
   array.run(Location("[true]"))
@@ -46,7 +46,7 @@ object jsonParser {
   lazy val objectKey = (str("\"") >> regex("[^\"]+".r) << str("\""))
 
   // again we need a type hint here, or the compiler wont be able to figure out the recursive structure
-  lazy val objectEntry: Parser[(String, Json)] = objectKey ** (str(":") >> (primitiveValue | objectP))
+  lazy val objectEntry: Parser[(String, Json)] = objectKey ** (str(":") >> (primitiveValue | array | objectP))
   lazy val objectP: Parser[JsonObject] =
     (str("{") >> objectEntry.zeroOrMoreTimes(",") << str("}")).map(entries => JsonObject(entries.to(Map)))
 

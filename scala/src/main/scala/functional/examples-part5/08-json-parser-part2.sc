@@ -14,7 +14,7 @@ primitiveValue.run(Location("\"abc\""))
 array.run(Location("[]"))
 array.run(Location("[true]"))
 array.run(Location("[true,12.6,\"word\"]"))
-array.run(Location("[true,[12.6,14.2],\"word\"]"))
+array.run(Location("[true,[12.6,14.2],{\"a\":[],\"b\":true},\"word\"]"))
 
 
 objectP.run(Location("{\"name\":\"john\",\"age\":29,\"address\":{\"street\":\"Hertzel\",\"no\":12}}"))
