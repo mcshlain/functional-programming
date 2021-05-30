@@ -190,8 +190,7 @@ object parserCombinatorMonadTailRec {
         }
     }
 
-    // BETTER QUANTIFIERS: We can't define them the way we want with combinators, lets just make them into basic
-    // operations, and we will have it efficient by implementing it with a tail recursion
+    // Implementation using our new tailRecM combinator
     def repeat[A](pa: Parser[A], times: Int): Parser[List[A]] =
       Monad[Parser].map(
         pa.tailRecM[List[A], List[A]](List.empty)(
