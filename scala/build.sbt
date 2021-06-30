@@ -3,5 +3,7 @@ lazy val root = project
   .settings(
     name := "functional-programming",
     version := "0.1.0",
-    scalaVersion := "3.0.0-RC1"
+    scalaVersion := "3.0.0-RC2"
 )
+
+
