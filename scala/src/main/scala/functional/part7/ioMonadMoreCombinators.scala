@@ -91,7 +91,7 @@ object ioMonadMoreCombinators {
 
   // do an effect unitl the effectful condition not longer works
   def doWhile[M[_]:Monad: HasTailRecM, A](ma: M[A])(cond: A => M[Boolean]): M[Unit] = {
-    HasTailRecM[M].tailRecM[Boolean, Unit](false) {
+    HasTailRecM[M].tailRecM[Boolean, Unit](true) {
       keepGoing => {
         if (keepGoing) {
           ma.flatMap(cond).map(b => Left(b)) // based on the condition we returned whether we should stop the recursion
