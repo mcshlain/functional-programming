@@ -80,7 +80,7 @@ object asyncIOMonad {
       } yield ()
     }
 
-    // This interprets out program as a Task, it doesn't run it
+    // This interprets our program as a Task, it doesn't run it
     val mainTask = interpret(foreverExample)
 
     given ec: ExecutionContextExecutorService = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
