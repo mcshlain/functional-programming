@@ -27,7 +27,7 @@ object ioMonad {
   // we can only define a monoid for this IO if A itself forms a monoid
   given [A: Monoid]: Monoid[IO[A]] with {
     override def empty: IO[A] = IO{
-      () => summon[Monoid[A]].empty
+      () => Monoid[A].empty
     }
 
     override def combine(ma: IO[A], mb: IO[A]): IO[A] = {
