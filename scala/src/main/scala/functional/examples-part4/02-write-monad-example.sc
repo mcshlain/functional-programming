@@ -1,4 +1,5 @@
 import functional.part3.monad.*
+import functional.part3.applicative.*
 import functional.part3.monoid.*
 import functional.part4.writerMonad.*
 
