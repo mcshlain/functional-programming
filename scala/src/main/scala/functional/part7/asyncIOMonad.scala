@@ -17,7 +17,7 @@ object asyncIOMonad {
 
   // a pure computation the immediatly returns an A
   // For example: pure will be implemented using this data constructor
-  case class Return[A](a: A) extends AsyncIO[A]
+  case class Pure[A](a: A) extends AsyncIO[A]
 
   // A suspension to the computation where resume is an async Task (this is the only change
   // to the data representation of IO)
@@ -31,7 +31,7 @@ object asyncIOMonad {
   // The Monad definition becomes trivial, the operations are just the corresponding
   // data constructors
   given Monad[AsyncIO] with {
-    override def pure[A](a: A): AsyncIO[A] = Return(a)
+    override def pure[A](a: A): AsyncIO[A] = Pure(a)
     override def flatMap[A, B](ma: AsyncIO[A], f: A => AsyncIO[B]): AsyncIO[B] = FlatMap(ma, f)
   }
 
@@ -39,13 +39,13 @@ object asyncIOMonad {
   @tailrec
   def step[A](async: AsyncIO[A]): AsyncIO[A] = async match {
     case FlatMap(FlatMap(x, f), g) => step(x.flatMap(a => f(a).flatMap(g)))
-    case FlatMap(Return(x), f) => step(f(x))
+    case FlatMap(Pure(x), f) => step(f(x))
     case _ => async
   }
 
   def interpret[A](async: AsyncIO[A]): Task[A] = step(async) match {
-    case Return(a) => Monad[Task].pure(a)
-    case Suspend(r) => r.flatMap(a => interpret(Return(a)))
+    case Pure(a) => Monad[Task].pure(a)
+    case Suspend(r) => r.flatMap(a => interpret(Pure(a)))
     case FlatMap(x, f) => x match {
       case Suspend(r) => r.flatMap(a => interpret(f(a)))
       case _ => sys.error("Impossible; `step` eliminates these cases")
