@@ -14,7 +14,7 @@ object ioMonadAsData {
 
   // a pure computation the immediatly returns an A
   // For example: pure will be implemented using this data constructor
-  case class Return[A](a: A) extends IO[A]
+  case class Pure[A](a: A) extends IO[A]
 
   // A suspension to the computation where resume is a function that takes not arguments
   // but has some effect and yields a result
@@ -31,7 +31,7 @@ object ioMonadAsData {
   // The Monad definition becomes trivial, the operations are just the corresponding
   // data constructors
   given Monad[IO] with {
-    override def pure[A](a: A): IO[A] = Return(a)
+    override def pure[A](a: A): IO[A] = Pure(a)
     override def flatMap[A, B](ma: IO[A], f: A => IO[B]): IO[B] = FlatMap(ma, f)
   }
 
@@ -40,7 +40,7 @@ object ioMonadAsData {
   @tailrec
   def run[A](io: IO[A]): A =
     io match {
-      case Return(a) => a
+      case Pure(a) => a
       case Suspend(r) => r()
 
       // The following implementation of the FlatMap case will not be tail recursive so we match on yet another level
@@ -53,7 +53,7 @@ object ioMonadAsData {
 
       // By matching again on x we eliminate the need to call run() twice, making the function tail recursive
       case FlatMap(x, f) => x match {
-        case Return(a) => run(f(a))
+        case Pure(a) => run(f(a))
         case Suspend(r) => run(f(r()))
         case FlatMap(y, g) =>
           run(y.flatMap(a => g(a).flatMap(f))) // just two applications of flatMap

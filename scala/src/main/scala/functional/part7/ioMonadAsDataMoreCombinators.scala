@@ -14,7 +14,7 @@ object ioMonadAsDataMoreCombinators {
 
   // a pure computation the immediatly returns an A
   // For example: pure will be implemented using this data constructor
-  case class Return[A](a: A) extends IO[A]
+  case class Pure[A](a: A) extends IO[A]
 
   // A suspension to the computation where resume is a function that takes not arguments
   // but has some effect and yields a result
@@ -31,7 +31,7 @@ object ioMonadAsDataMoreCombinators {
   // The Monad definition becomes trivial, the operations are just the corresponding
   // data constructors
   given Monad[IO] with {
-    override def pure[A](a: A): IO[A] = Return(a)
+    override def pure[A](a: A): IO[A] = Pure(a)
     override def flatMap[A, B](ma: IO[A], f: A => IO[B]): IO[B] = FlatMap(ma, f)
   }
 
@@ -41,7 +41,7 @@ object ioMonadAsDataMoreCombinators {
   @tailrec
   def run[A](io: IO[A]): A =
     io match {
-      case Return(a) => a
+      case Pure(a) => a
       case Suspend(r) => r()
 
       // The following implementation of the FlatMap case will not be tail recursive so we match on yet another level
@@ -54,7 +54,7 @@ object ioMonadAsDataMoreCombinators {
 
       // By matching again on x we eliminate the need to call run() twice, making the function tail recursive
       case FlatMap(x, f) => x match {
-        case Return(a) => run(f(a))
+        case Pure(a) => run(f(a))
         case Suspend(r) => run(f(r()))
         case FlatMap(y, g) =>
           run(y.flatMap(a => g(a).flatMap(f))) // just two applications of flatMap
@@ -64,7 +64,7 @@ object ioMonadAsDataMoreCombinators {
 
   // basic operations (effects are always encloused in a Suspend)
   def PrintLine(s: String): IO[Unit] =
-    Suspend(() => Return(println(s)))
+    Suspend(() => println(s))
 
   val ReadLine: IO[String] =
     Suspend(() => StdIn.readLine())
@@ -108,15 +108,15 @@ object ioMonadAsDataMoreCombinators {
     _ <- PrintLine("Enter something, q for exit")
     _ <- doWhile(ReadLine){ input =>
       if (input == "q") {
-        PrintLine(s"Exiting based on user request").map(_ => true)
+        PrintLine(s"Exiting based on user request").map(_ => false)
       } else {
-        PrintLine(s"got $input").map(_ => false)
+        PrintLine(s"got $input").map(_ => true)
       }
     }
   } yield ()
 
   // Now this large fold will no longer crash!!!
-  val foldMExample = foldM[Int, Int]((1 to 10000).to(LazyList))(0){
+  val foldMExample = foldM[Int, Int]((1 to 100000).to(LazyList))(0){
     (acc, v) => PrintLine(s"Accamulator so far: $acc").map(_ => acc + v)
   }
 

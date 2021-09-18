@@ -13,7 +13,7 @@ object tailRecMonad {
 
   // a pure computation the immediatly returns an A
   // For example: pure will be implemented using this data constructor
-  case class Return[A](a: A) extends TailRec[A]
+  case class Pure[A](a: A) extends TailRec[A]
 
   // A suspension to the computation where resume is a function that takes not arguments
   // but has some effect and yields a result
@@ -28,7 +28,7 @@ object tailRecMonad {
   // The Monad definition becomes trivial, the operations are just the corresponding
   // data constructors
   given Monad[TailRec] with {
-    override def pure[A](a: A): TailRec[A] = Return(a)
+    override def pure[A](a: A): TailRec[A] = Pure(a)
     override def flatMap[A, B](ma: TailRec[A], f: A => TailRec[B]): TailRec[B] = FlatMap(ma, f)
   }
 
@@ -36,10 +36,10 @@ object tailRecMonad {
   @tailrec
   def run[A](io: TailRec[A]): A =
     io match {
-      case Return(a) => a
+      case Pure(a) => a
       case Suspend(r) => r()
       case FlatMap(x, f) => x match {
-        case Return(a) => run(f(a))
+        case Pure(a) => run(f(a))
         case Suspend(r) => run(f(r()))
         case FlatMap(y, g) =>
           run(y.flatMap(a => g(a).flatMap(f))) // just two applications of flatMap
