@@ -210,8 +210,6 @@ object ioMonadAsDataVisualInterpreter {
 
 
   def main(args: Array[String]): Unit = {
-//    val comp = PrintLine("Hello World") >> PrintLine("Goodbye")
-//  val comp = simpleProgram
   val comp = doWhileExample
 //  val comp = foreverExample
 //  val comp = foldMExample
