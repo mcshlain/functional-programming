@@ -36,6 +36,13 @@ object ioMonadAsDataMoreCombinators {
   }
 
 
+  // basic operations (effects are always encloused in a Suspend)
+  def PrintLine(s: String): IO[Unit] =
+    Suspend(() => println(s))
+
+  val ReadLine: IO[String] =
+    Suspend(() => StdIn.readLine())
+
 
   // The tail recursive interpreter of the IO data constructors
   @tailrec
@@ -60,15 +67,6 @@ object ioMonadAsDataMoreCombinators {
           run(y.flatMap(a => g(a).flatMap(f))) // just two applications of flatMap
       }
     }
-
-
-  // basic operations (effects are always encloused in a Suspend)
-  def PrintLine(s: String): IO[Unit] =
-    Suspend(() => println(s))
-
-  val ReadLine: IO[String] =
-    Suspend(() => StdIn.readLine())
-
 
   // More combinators
   // we made them specific to IO this time because only for IO we created this tail recursive interpreter

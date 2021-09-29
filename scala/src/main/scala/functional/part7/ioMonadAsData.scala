@@ -35,6 +35,13 @@ object ioMonadAsData {
     override def flatMap[A, B](ma: IO[A], f: A => IO[B]): IO[B] = FlatMap(ma, f)
   }
 
+  // basic operations (effects are always encloused in a Suspend)
+  def PrintLine(s: String): IO[Unit] =
+    Suspend(() => println(s))
+
+  val ReadLine: IO[String] =
+    Suspend(() => StdIn.readLine())
+
 
   // The tail recursive interpreter of the IO data constructors
   @tailrec
@@ -59,14 +66,6 @@ object ioMonadAsData {
           run(y.flatMap(a => g(a).flatMap(f))) // just two applications of flatMap
       }
     }
-
-
-  // basic operations (effects are always encloused in a Suspend)
-  def PrintLine(s: String): IO[Unit] =
-    Suspend(() => println(s))
-
-  val ReadLine: IO[String] =
-    Suspend(() => StdIn.readLine())
 
 
   def main(args: Array[String]): Unit = {
