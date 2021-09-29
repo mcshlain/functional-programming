@@ -83,7 +83,7 @@ object ioMonadAsDataVisualInterpreter {
       println(s"Interpreting $topFrame")
 
       topFrame match {
-        case c@Pure(a) =>
+        case Pure(a) =>
           returnedValue = a
         case Suspend(f) =>
           returnedValue = f()
@@ -210,7 +210,13 @@ object ioMonadAsDataVisualInterpreter {
 
 
   def main(args: Array[String]): Unit = {
-  val comp = doWhileExample
+    val comp = for {
+      _ <- PrintLine("What is your name?")
+      name <- ReadLine()
+      _ <- PrintLine(s"Hello $name")
+    } yield ()
+
+//  val comp = doWhileExample
 //  val comp = foreverExample
 //  val comp = foldMExample
 
