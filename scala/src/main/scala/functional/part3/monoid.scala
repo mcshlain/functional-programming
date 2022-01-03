@@ -15,7 +15,7 @@ object monoid {
   given Monoid[Int] with {
     def empty = 0
 
-    def combine(x: Int, y: Int) = x + y
+    def combine(x: Int, y: Int): Int = x + y
   }
 
   given Monoid[String] with {
@@ -25,7 +25,7 @@ object monoid {
   }
 
   given [A]:Monoid[List[A]] with {
-    def empty = List.empty
+    def empty: List[A] = List.empty
 
     def combine(x: List[A], y: List[A]): List[A] = x.concat(y)
   }

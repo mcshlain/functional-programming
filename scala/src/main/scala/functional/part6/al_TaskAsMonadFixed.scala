@@ -130,8 +130,8 @@ object al_TaskAsMonadFixed {
 
   // For a more complete implementation we also need to add variations with timeout
   def executeAsyncAndWait[A](a: Task[A])(using ec: ExecutionContext): A = {
-    val lock = new Object();
-    var result: Option[AsyncResult[A]] = None;
+    val lock = new Object()
+    var result: Option[AsyncResult[A]] = None
 
     a.executeAsync((r: AsyncResult[A]) => {
       lock.synchronized {
@@ -141,7 +141,7 @@ object al_TaskAsMonadFixed {
     })
 
     lock.synchronized {
-      if (!result.isDefined) {
+      if (result.isEmpty) {
         lock.wait()
       }
     }
