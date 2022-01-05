@@ -60,6 +60,7 @@ object ac_userLoyaltyFree {
   }
 
 
+
   def main(args: Array[String]): Unit = {
 
     // since the free monad is a monad we can write programs with it
@@ -68,7 +69,7 @@ object ac_userLoyaltyFree {
       _ <- updateUser(User(userId, "mail", 0))
       _ <- addPoints(userId, 6)
       user <- findUser(userId)
-    } yield user
+    } yield user.get
 
     // we can look at the data structure created that represents our program
     print(program)

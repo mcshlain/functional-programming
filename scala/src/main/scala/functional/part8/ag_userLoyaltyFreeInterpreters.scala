@@ -2,8 +2,10 @@ package functional.part8
 
 import functional.part3.applicative.*
 import functional.part3.monad.*
+import functional.part4.stateMonad.*
 import functional.part6.al_TaskAsMonadFixed.*
 import functional.part8.ae_freeMonadWithFoldMap.*
+import functional.part8.af_LazyMonad.*
 import functional.part8.ad_naturalTransformation.*
 
 import java.util.UUID
@@ -11,7 +13,7 @@ import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 import scala.collection.mutable
 
-object af_userLoyaltyFreeInterpreter {
+object ag_userLoyaltyFreeInterpreters {
 
   case class User(id: UUID, email: String, loyaltyPoints: Int)
 
@@ -70,12 +72,36 @@ object af_userLoyaltyFreeInterpreter {
       _ <- updateUser(User(userId, "mail", 0))
       _ <- addPoints(userId, 6)
       user <- findUser(userId)
-    } yield user
+    } yield user.get
 
 
-    // We define a natural transformation from our syntax to Task, and this is essentially our interpreter
-    // Very simply we just specify for every instruction the equivalent Task
-    val inMemoryInterpreter: UserRepositoryAlg ~> Task = new NaturalTransformation[UserRepositoryAlg, Task] {
+    // We can define a natural transformation from our free syntax to Lazy
+    val inMemoryLazyInterpreter: UserRepositoryAlg ~> Lazy = new (UserRepositoryAlg ~> Lazy) {
+
+      val memoryStorage = mutable.Map.empty[UUID, User]
+
+      override def apply[A](fa: UserRepositoryAlg[A]): Lazy[A] = fa match {
+        case FindUser(userId) => Lazy{
+          () => memoryStorage.get(userId)
+        }
+        case UpdateUser(user) => Lazy{
+          () => {
+            memoryStorage.put(user.id, user)
+            ()
+          }
+        }
+      }
+    }
+
+    val programAsLazy = foldMap(program, inMemoryLazyInterpreter)
+
+    println("Executing the program as the Lazy Monad: ")
+    println(programAsLazy.eval())
+
+
+    // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
+    // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
+    val inMemoryTaskInterpreter: UserRepositoryAlg ~> Task = new (UserRepositoryAlg ~> Task) {
 
       val memoryStorage = mutable.Map.empty[UUID, User]
 
@@ -91,15 +117,46 @@ object af_userLoyaltyFreeInterpreter {
     }
 
     // We run the interpreter using foldMap
-    val programAsTask = foldMap(program, inMemoryInterpreter)
+    val programAsTask = foldMap(program, inMemoryTaskInterpreter)
 
     // We execute the program as a task
     given ec: ExecutionContextExecutorService = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
 
-    val user = executeAsyncAndWait(programAsTask)
-    print(user)
+    println("Executing the program as the Task Monad (a.k.a Promise/Future): ")
+    println(executeAsyncAndWait(programAsTask))
 
     ec.shutdown()
+
+
+    // A more pure implementation is to transform our program is into a State Monad
+
+    // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
+    // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
+
+    // State has two parameters so we define an alias to make it simpler to use
+    type RepoState[A] = State[Map[UUID, User], A]
+
+    val inMemoryStateInterpreter: UserRepositoryAlg ~> RepoState = new (UserRepositoryAlg ~> RepoState) {
+
+      override def apply[A](fa: UserRepositoryAlg[A]): RepoState[A] = fa match {
+        case FindUser(userId) => State { s0 =>
+          (s0, s0.get(userId))
+        }
+
+        case UpdateUser(user) => State { s0 =>
+          val s1 = s0 + (user.id -> user)
+          (s1, ())
+        }
+      }
+    }
+
+    // We run the interpreter using foldMap
+    val programAsState = foldMap(program, inMemoryStateInterpreter)
+
+    println("Executing the program as the State Monad: ")
+    val initialState = Map.empty[UUID, User]
+    print(programAsState.run(initialState))
+
   }
 
 }
