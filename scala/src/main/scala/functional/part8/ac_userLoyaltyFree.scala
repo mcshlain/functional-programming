@@ -17,9 +17,9 @@ object ac_userLoyaltyFree {
   // ------
   // Define the basic operations of our DSL (as data)
   // NOTE: We avoid committing to a specific effect so we don't have any mention of 'Future' here
-  sealed trait UserRepositoryAlg[A]
-  case class FindUser(userId: UUID) extends UserRepositoryAlg[Option[User]]
-  case class UpdateUser(user: User) extends UserRepositoryAlg[Unit]
+  sealed trait UserRepositoryInstructionSet[A]
+  case class FindUser(userId: UUID) extends UserRepositoryInstructionSet[Option[User]]
+  case class UpdateUser(user: User) extends UserRepositoryInstructionSet[Unit]
 
 
   // Step 2
@@ -28,7 +28,7 @@ object ac_userLoyaltyFree {
   // multiple parameters
   // NOTE: UserRepository is a language where UserRepositoryAlg is the instruction set
 
-  type UserRepository[A] = FreeMonad[UserRepositoryAlg, A]
+  type UserRepository[A] = FreeMonad[UserRepositoryInstructionSet, A]
 
 
 

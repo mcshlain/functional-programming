@@ -22,9 +22,9 @@ object ag_userLoyaltyFreeInterpreters {
   // ------
   // Define the basic operations of our DSL (as data)
   // NOTE: We avoid committing to a specific effect so we don't have any mention of 'Future' here
-  sealed trait UserRepositoryAlg[A]
-  case class FindUser(userId: UUID) extends UserRepositoryAlg[Option[User]]
-  case class UpdateUser(user: User) extends UserRepositoryAlg[Unit]
+  sealed trait UserRepositoryInstructionSet[A]
+  case class FindUser(userId: UUID) extends UserRepositoryInstructionSet[Option[User]]
+  case class UpdateUser(user: User) extends UserRepositoryInstructionSet[Unit]
 
 
   // Step 2
@@ -33,7 +33,7 @@ object ag_userLoyaltyFreeInterpreters {
   // multiple parameters
   // NOTE: UserRepository is a language where UserRepositoryAlg is the instruction set
 
-  type UserRepository[A] = FreeMonad[UserRepositoryAlg, A]
+  type UserRepository[A] = FreeMonad[UserRepositoryInstructionSet, A]
 
 
   // Step 3
@@ -76,11 +76,11 @@ object ag_userLoyaltyFreeInterpreters {
 
 
     // We can define a natural transformation from our free syntax to Lazy
-    val inMemoryLazyInterpreter: UserRepositoryAlg ~> Lazy = new (UserRepositoryAlg ~> Lazy) {
+    val inMemoryLazyInterpreter: UserRepositoryInstructionSet ~> Lazy = new (UserRepositoryInstructionSet ~> Lazy) {
 
       val memoryStorage = mutable.Map.empty[UUID, User]
 
-      override def apply[A](fa: UserRepositoryAlg[A]): Lazy[A] = fa match {
+      override def apply[A](fa: UserRepositoryInstructionSet[A]): Lazy[A] = fa match {
         case FindUser(userId) => Lazy{
           () => memoryStorage.get(userId)
         }
@@ -101,11 +101,11 @@ object ag_userLoyaltyFreeInterpreters {
 
     // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
     // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
-    val inMemoryTaskInterpreter: UserRepositoryAlg ~> Task = new (UserRepositoryAlg ~> Task) {
+    val inMemoryTaskInterpreter: UserRepositoryInstructionSet ~> Task = new (UserRepositoryInstructionSet ~> Task) {
 
       val memoryStorage = mutable.Map.empty[UUID, User]
 
-      override def apply[A](fa: UserRepositoryAlg[A]): Task[A] = fa match {
+      override def apply[A](fa: UserRepositoryInstructionSet[A]): Task[A] = fa match {
         case FindUser(userId) => Task{
           memoryStorage.get(userId)
         }
@@ -136,9 +136,9 @@ object ag_userLoyaltyFreeInterpreters {
     // State has two parameters so we define an alias to make it simpler to use
     type RepoState[A] = State[Map[UUID, User], A]
 
-    val inMemoryStateInterpreter: UserRepositoryAlg ~> RepoState = new (UserRepositoryAlg ~> RepoState) {
+    val inMemoryStateInterpreter: UserRepositoryInstructionSet ~> RepoState = new (UserRepositoryInstructionSet ~> RepoState) {
 
-      override def apply[A](fa: UserRepositoryAlg[A]): RepoState[A] = fa match {
+      override def apply[A](fa: UserRepositoryInstructionSet[A]): RepoState[A] = fa match {
         case FindUser(userId) => State { s0 =>
           (s0, s0.get(userId))
         }

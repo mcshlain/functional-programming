@@ -43,7 +43,7 @@ object ae_freeMonadWithFoldMap {
   // NOTE: it's useful to think of "nt" as just a function but instead of being over types, say S -> M like a regular
   //       function it's a function that on type constructors S and M, so that given S[A] produces a
   //       M[A] for every A (for any A)
-  def foldMap[M[_]: Monad, S[_], A](fm: FreeMonad[S, A], nt: S ~> M): M[A] =
+  def foldMap[S[_], A, M[_]: Monad](fm: FreeMonad[S, A], nt: S ~> M): M[A] =
     fm match {
       case Pure(a) => Monad[M].pure(a)     // we know M is a Monad so it has a pure function we can summon
       case Suspend(resume) => nt(resume)   // resume is of type S, just apply nt to produce M

@@ -29,4 +29,31 @@ object ad_naturalTransformation {
   // this way "NaturialTransformation[List, Option]" can also be written as "List ~> Option"
   type ~>[F[_], G[_]] = NaturalTransformation[F, G]
 
+
+  def main(args: Array[String]): Unit = {
+
+    val optToList: Option ~> List = new (Option ~> List) {
+      override def apply[A](fa: Option[A]): List[A] = fa match {
+        case Some(value) => List(value)
+        case None => List.empty
+      }
+    }
+
+    val listToOpt: List ~> Option = new (List ~> Option) {
+      override def apply[A](fa: List[A]): Option[A] = fa match {
+        case h:: t => Some(h) // we just ignore all other values in the list
+        case Nil => None
+      }
+    }
+
+
+    val value = List(1,2,3,4,5)
+
+    println(listToOpt(value))
+
+    val composedNT = listToOpt.andThen(optToList)
+
+    println(composedNT(value))
+  }
+
 }
