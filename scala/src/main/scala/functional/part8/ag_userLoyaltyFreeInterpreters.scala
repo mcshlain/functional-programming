@@ -64,6 +64,62 @@ object ag_userLoyaltyFreeInterpreters {
   }
 
 
+  // We can define a natural transformation from our free syntax to Lazy
+  val inMemoryLazyInterpreter: UserRepositoryInstructionSet ~> Lazy = new (UserRepositoryInstructionSet ~> Lazy) {
+
+    val memoryStorage = mutable.Map.empty[UUID, User]
+
+    override def apply[A](fa: UserRepositoryInstructionSet[A]): Lazy[A] = fa match {
+      case FindUser(userId) => Lazy{
+        () => memoryStorage.get(userId)
+      }
+      case UpdateUser(user) => Lazy{
+        () => {
+          memoryStorage.put(user.id, user)
+          ()
+        }
+      }
+    }
+  }
+
+
+  // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
+  // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
+  val inMemoryTaskInterpreter: UserRepositoryInstructionSet ~> Task = new (UserRepositoryInstructionSet ~> Task) {
+
+    val memoryStorage = mutable.Map.empty[UUID, User]
+
+    override def apply[A](fa: UserRepositoryInstructionSet[A]): Task[A] = fa match {
+      case FindUser(userId) => Task{
+        memoryStorage.get(userId)
+      }
+      case UpdateUser(user) => Task{
+        memoryStorage.put(user.id, user)
+        ()
+      }
+    }
+  }
+
+
+  // A more pure implementation is to transform our program is into a State Monad
+  // State has two parameters so we define an alias to make it simpler to use
+  type RepoState[A] = State[Map[UUID, User], A]
+
+  val inMemoryStateInterpreter: UserRepositoryInstructionSet ~> RepoState = new (UserRepositoryInstructionSet ~> RepoState) {
+
+    override def apply[A](fa: UserRepositoryInstructionSet[A]): RepoState[A] = fa match {
+      case FindUser(userId) => State { s0 =>
+        (s0, s0.get(userId))
+      }
+
+      case UpdateUser(user) => State { s0 =>
+        val s1 = s0 + (user.id -> user)
+        (s1, ())
+      }
+    }
+  }
+
+
   def main(args: Array[String]): Unit = {
 
     // since the free monad is a monad we can write programs with it
@@ -74,47 +130,10 @@ object ag_userLoyaltyFreeInterpreters {
       user <- findUser(userId)
     } yield user.get
 
-
-    // We can define a natural transformation from our free syntax to Lazy
-    val inMemoryLazyInterpreter: UserRepositoryInstructionSet ~> Lazy = new (UserRepositoryInstructionSet ~> Lazy) {
-
-      val memoryStorage = mutable.Map.empty[UUID, User]
-
-      override def apply[A](fa: UserRepositoryInstructionSet[A]): Lazy[A] = fa match {
-        case FindUser(userId) => Lazy{
-          () => memoryStorage.get(userId)
-        }
-        case UpdateUser(user) => Lazy{
-          () => {
-            memoryStorage.put(user.id, user)
-            ()
-          }
-        }
-      }
-    }
-
     val programAsLazy = foldMap(program, inMemoryLazyInterpreter)
 
     println("Executing the program as the Lazy Monad: ")
     println(programAsLazy.eval())
-
-
-    // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
-    // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
-    val inMemoryTaskInterpreter: UserRepositoryInstructionSet ~> Task = new (UserRepositoryInstructionSet ~> Task) {
-
-      val memoryStorage = mutable.Map.empty[UUID, User]
-
-      override def apply[A](fa: UserRepositoryInstructionSet[A]): Task[A] = fa match {
-        case FindUser(userId) => Task{
-          memoryStorage.get(userId)
-        }
-        case UpdateUser(user) => Task{
-          memoryStorage.put(user.id, user)
-          ()
-        }
-      }
-    }
 
     // We run the interpreter using foldMap
     val programAsTask = foldMap(program, inMemoryTaskInterpreter)
@@ -127,36 +146,12 @@ object ag_userLoyaltyFreeInterpreters {
 
     ec.shutdown()
 
-
-    // A more pure implementation is to transform our program is into a State Monad
-
-    // We define a natural transformation from our syntax to Task, If our interpreter is Async it's better to
-    // define as Task and not Lazy, because we'll need to make the Lazy interpreter blocking
-
-    // State has two parameters so we define an alias to make it simpler to use
-    type RepoState[A] = State[Map[UUID, User], A]
-
-    val inMemoryStateInterpreter: UserRepositoryInstructionSet ~> RepoState = new (UserRepositoryInstructionSet ~> RepoState) {
-
-      override def apply[A](fa: UserRepositoryInstructionSet[A]): RepoState[A] = fa match {
-        case FindUser(userId) => State { s0 =>
-          (s0, s0.get(userId))
-        }
-
-        case UpdateUser(user) => State { s0 =>
-          val s1 = s0 + (user.id -> user)
-          (s1, ())
-        }
-      }
-    }
-
     // We run the interpreter using foldMap
     val programAsState = foldMap(program, inMemoryStateInterpreter)
 
     println("Executing the program as the State Monad: ")
     val initialState = Map.empty[UUID, User]
     print(programAsState.run(initialState))
-
   }
 
 }
