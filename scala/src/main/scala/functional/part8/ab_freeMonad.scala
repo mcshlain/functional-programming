@@ -8,16 +8,14 @@ object ab_freeMonad {
   // Similar to our IO definition, but we extract the exact effect of Suspend in S[_]
   sealed trait FreeMonad[S[_], A]
 
-  // a pure computation the immediatly returns an A
-  // For example: pure will be implemented using this data constructor
+  // a pure computation the immediately returns an A
   case class Pure[S[_], A](a: A) extends FreeMonad[S, A]
 
-  // A suspension to the computation where resume is a function that takes not arguments
-  // but has some effect and yields a result
-  // For example: reading information from the user will be implemented using this data constructor
+  // A suspension to the computation where resume is a some instruction in our instruction set
+  // it has some effect and yields a result
   case class Suspend[S[_], A](resume: S[A]) extends FreeMonad[S, A]
 
-  // A composition of two steps, when the interpreter will encounter this it will first process
+  // A composition of two computations, when the interpreter will encounter this it will first process
   // the 'sub' computation and then based on its result process the second computation (available through f)
   case class FlatMap[S[_], A, B](sub: FreeMonad[S, A], f: A => FreeMonad[S, B]) extends FreeMonad[S, B]
 
@@ -30,7 +28,9 @@ object ab_freeMonad {
     override def flatMap[A, B](ma: FreeMonad[S, A], f: A => FreeMonad[S, B]): FreeMonad[S, B] = FlatMap(ma, f)
   }
 
-  // Lift any container S[A] into the more general free form
+  // Lift any instruction from the syntax S[A] into the free computation
+  // (transform it into a more general form where we have a monad definition and thus can compose programs
+  // into bigger programs through sequencing operations)
   inline def liftFM[S[_], A](value: S[A]): FreeMonad[S, A] = Suspend(value)
 
 }
