@@ -1,0 +1,6 @@
+[project]
+name = "python-generators-io"
+version = "0.1.0"
+description = "Examples of how to use generators as IO monad"
+requires-python = ">=3.12"
+dependencies = []

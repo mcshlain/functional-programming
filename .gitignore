@@ -9,3 +9,4 @@ scala/project/target
 scala/project/project
 scala/.idea
 scala/.bsp
+python/.venv
