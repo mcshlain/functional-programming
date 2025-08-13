@@ -6,12 +6,6 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Callable, Never, Sequence
 
-
-@dataclass(frozen=True, slots=True)
-class SubTask[E, A]:
-    suspended_io: IO[E, A]
-
-
 # -------------- #
 # Syntax as Data #
 # -------------- #
@@ -23,16 +17,31 @@ class StopFromError[E]:
 
 
 @dataclass(frozen=True, slots=True)
-class Join:
-    subtasks: Sequence[SubTask[Any, Any]]
+class Sleep:
+    delay: float
+
+
+@dataclass(frozen=True, slots=True)
+class Gather:
+    subtasks: Sequence[IO[Any, Any]]
+
+
+# ----------------------------------------------------- #
+# Messages from the interpreter back to the computation #
+# ----------------------------------------------------- #
+
+
+@dataclass(frozen=True, slots=True)
+class ExitInPlace:
+    error: Any
 
 
 # ---------------- #
 # They Either Type #
 # ---------------- #
 
-type IOYield[E] = StopFromError[E] | Join
-type IOSend = Any
+type IOYield[E] = StopFromError[E] | Gather | Sleep
+type IOSend = Any | ExitInPlace
 type IO[E, A] = Generator[IOYield[E], IOSend, A]
 
 # ------------------------- #
@@ -52,14 +61,17 @@ def pure[A](value: A) -> IO[Never, A]:
     yield
 
 
-def fork[E, A](comp: IO[E, A]) -> SubTask[E, A]:
-    return SubTask(comp)
-
-
 # NOTE: Need many overloads to get type safe return value
-def join[E](sub_tasks: Sequence[SubTask[E, Any]]) -> IO[E, Sequence[Any]]:
-    r = yield Join(sub_tasks)
+def gather[E](sub_tasks: Sequence[IO[E, Any]]) -> IO[E, Sequence[Any]]:
+    r = yield Gather(sub_tasks)
+    if isinstance(r, ExitInPlace):
+        yield from halt_with_error(r.error)
+        raise
     return r
+
+
+def sleep(delay: float) -> IO[Never, None]:
+    yield Sleep(delay)
 
 
 # ----------- #
@@ -79,6 +91,8 @@ class _RecoverWith[E, A, B]:
             e = StopIteration()
             e.value = self.recover(v.error)
             raise e
+        else:
+            pass
         return v
 
     def throw(
@@ -133,11 +147,15 @@ async def run_single_command[E](command: IOYield[E]) -> Any | StopFromError[E]:
     match command:
         case StopFromError() as stp:
             return stp
-        case Join(sub_commands):
-            sub_results = await asyncio.gather(*[run_io(st.suspended_io) for st in sub_commands])
+        case Sleep(delay):
+            await asyncio.sleep(delay)
+        case Gather(sub_tasks):
+            sub_results = await asyncio.gather(*[run_io(st) for st in sub_tasks])
             for sr in sub_results:
                 if isinstance(sr, StopFromError):
-                    return sr  # NOTE: arbitrarily return the first error, can also do something else
+                    # NOTE: instead of just exiting we need to send the error back to the parent copmutation, otherwise
+                    #       the recover_with that is defined on the parent computation wont be triggered
+                    return ExitInPlace(sr.error)
             return sub_results
 
 
@@ -156,6 +174,8 @@ def prefix_of(s: str, /, length: int) -> IO[PrefixToLong, str]:
         x = yield from halt_with_error(PrefixToLong())
         return x
     else:
+        # NOTE: simulate long computation
+        yield from sleep(1)
         return s[0:length]
 
 
@@ -166,26 +186,28 @@ class SuffixToLong:
 
 def suffix_of(s: str, /, length: int) -> IO[SuffixToLong, str]:
     if len(s) < length:
-        # x = yield from halt_with_error(f"can't take the suffix of '{s}' of lengh {length}, it's not long enough")
         x = yield from halt_with_error(SuffixToLong())
         return x
     else:
+        # NOTE: simulate long computation
+        yield from sleep(0.5)
+
         return s[len(s) - length :]
 
 
 def prog1() -> IO[PrefixToLong | SuffixToLong, int]:
-    st1 = fork(prefix_of("abcdefgh", 4))
-    st2 = fork(suffix_of("abcdefgh", 2))
+    st1 = prefix_of("abcdefgh", 4)
+    st2 = suffix_of("abcdefgh", 2)
 
-    r1, r2 = yield from join([st1, st2])
+    r1, r2 = yield from gather([st1, st2])
     return r1 + r2
 
 
 def prog2() -> IO[PrefixToLong | SuffixToLong, int]:
-    st1 = fork(prefix_of("abcdefgh", 4))
-    st2 = fork(suffix_of("abcdefgh", 20))
+    st1 = prefix_of("abcdefgh", 4)
+    st2 = suffix_of("abcdefgh", 20)
 
-    r1, r2 = yield from join([st1, st2])
+    r1, r2 = yield from gather([st1, st2])
     return r1 + r2
 
 
@@ -197,6 +219,12 @@ async def main() -> None:
     r2 = await run_io(prog2())
 
     print(f"{r2=}")
+
+    r3 = await run_io(
+        recover_with(prog2(), lambda e: "suffix error" if isinstance(e, SuffixToLong) else "prefix error")
+    )
+
+    print(f"{r3=}")
 
 
 if __name__ == "__main__":
