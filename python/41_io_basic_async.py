@@ -191,7 +191,6 @@ def suffix_of(s: str, /, length: int) -> IO[SuffixToLong, str]:
     else:
         # NOTE: simulate long computation
         yield from sleep(0.5)
-
         return s[len(s) - length :]
 
 
