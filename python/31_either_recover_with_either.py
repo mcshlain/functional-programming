@@ -195,7 +195,7 @@ def prog4() -> Either[Never, int | str]:
     return r
 
 
-def _recover_from_internal_error_only(e: DivideByZero | InternalError) -> Either[DivideByZero, int]:
+def _recover_from_internal_error_only[E](e: E | InternalError) -> Either[E, int]:
     if isinstance(e, InternalError):
         return 0
     else:

@@ -243,7 +243,7 @@ def prog4() -> EitherGen[Never, int | str]:
 
 
 @eitherable
-def _recover_from_internal_error_only(e: DivideByZero | InternalError) -> EitherGen[DivideByZero, int]:
+def _recover_from_internal_error_only[E](e: E | InternalError) -> EitherGen[E, int]:
     if isinstance(e, InternalError):
         return 0
     else:
