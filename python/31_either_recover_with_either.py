@@ -82,6 +82,52 @@ def recover_with[E, A, B](either: Either[E, A], recover: Callable[[E], B]) -> Ei
     return _RecoverWith(either, recover)
 
 
+@dataclass
+class _RecoverWithEither[E1, E2, A, B]:
+    decorated: Either[E1, A]
+    recover: Callable[[E1], Either[E2, B]]
+    decorated_recover: Either[E2, B] | None = None
+
+    # generator protocol
+    def send(self, value: EitherSend) -> EitherYield[E2]:
+        if self.decorated_recover is not None:
+            return self.decorated_recover.send(value)
+        else:
+            v = self.decorated.send(value)
+
+            if isinstance(v, StopFromError):
+                self.decorated_recover = self.recover(v.error)
+                return next(self.decorated_recover)  # start the recover io
+            else:
+                pass
+
+            return v
+
+    def throw(
+        self,
+        typ: type[BaseException] | BaseException,
+        val: Any | None = None,
+        tb: TracebackType | None = None,
+    ) -> Any:
+        return self.decorated.throw(typ, val, tb)
+
+    def close(self) -> None:
+        self.decorated.close()
+
+    # iterator protocol
+    def __next__(self) -> EitherYield[E2]:
+        return self.send(None)
+
+    def __iter__(self) -> Either[E2, A | B]:
+        return self
+
+
+def recover_with_either[E1, E2, A, B](
+    io: Either[E1, A], recover_io: Callable[[E1], Either[E2, B]]
+) -> Either[E2, A | B]:
+    return _RecoverWithEither(io, recover_io)
+
+
 # ----------- #
 # Interpreter #
 # ----------- #
@@ -149,6 +195,14 @@ def prog4() -> Either[Never, int | str]:
     return r
 
 
+def _recover_from_internal_error_only(e: DivideByZero | InternalError) -> Either[DivideByZero, int]:
+    if isinstance(e, InternalError):
+        return 0
+    else:
+        x = yield from halt_with_error(e)
+        return x
+
+
 def main() -> None:
     r1 = run_either(prog1())
     r2 = run_either(prog2())
@@ -158,6 +212,10 @@ def main() -> None:
 
     r4 = run_either(prog4())
     print(f"{r4=}")
+
+    r5 = run_either(recover_with_either(prog2(), _recover_from_internal_error_only))
+    r6 = run_either(recover_with_either(prog3(), _recover_from_internal_error_only))
+    print(f"{r5=} {r6=}")
 
 
 if __name__ == "__main__":

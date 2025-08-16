@@ -108,12 +108,7 @@ class _RecoverWith[E, A, B]:
 
     # iterator protocol
     def __next__(self) -> IOYield[Never]:
-        v = self.decorated.__next__()
-        if isinstance(v, StopFromError):
-            e = StopIteration()
-            e.value = self.recover(v.error)
-            raise e
-        return v
+        return self.send(None)
 
     def __iter__(self) -> IO[Never, A | B]:
         return self
@@ -165,13 +160,13 @@ def run_single_command[E](command: IOYield[E]) -> Any | StopFromError[E]:
 
 
 @dataclass(frozen=True, slots=True)
-class PrefixToLong:
+class PrefixTooLong:
     pass
 
 
-def prefix_of(s: str, /, length: int) -> IO[PrefixToLong, str]:
+def prefix_of(s: str, /, length: int) -> IO[PrefixTooLong, str]:
     if len(s) < length:
-        x = yield from halt_with_error(PrefixToLong())
+        x = yield from halt_with_error(PrefixTooLong())
         return x
     else:
         # NOTE: simulate long computation
@@ -180,13 +175,13 @@ def prefix_of(s: str, /, length: int) -> IO[PrefixToLong, str]:
 
 
 @dataclass(frozen=True, slots=True)
-class SuffixToLong:
+class SuffixTooLong:
     pass
 
 
-def suffix_of(s: str, /, length: int) -> IO[SuffixToLong, str]:
+def suffix_of(s: str, /, length: int) -> IO[SuffixTooLong, str]:
     if len(s) < length:
-        x = yield from halt_with_error(SuffixToLong())
+        x = yield from halt_with_error(SuffixTooLong())
         return x
     else:
         # NOTE: simulate long computation
@@ -194,7 +189,7 @@ def suffix_of(s: str, /, length: int) -> IO[SuffixToLong, str]:
         return s[len(s) - length :]
 
 
-def prog1() -> IO[PrefixToLong | SuffixToLong, int]:
+def prog1() -> IO[PrefixTooLong | SuffixTooLong, int]:
     st1 = prefix_of("abcdefgh", 4)
     st2 = suffix_of("abcdefgh", 2)
 
@@ -202,7 +197,7 @@ def prog1() -> IO[PrefixToLong | SuffixToLong, int]:
     return r1 + r2
 
 
-def prog2() -> IO[PrefixToLong | SuffixToLong, int]:
+def prog2() -> IO[PrefixTooLong | SuffixTooLong, int]:
     st1 = prefix_of("abcdefgh", 4)
     st2 = suffix_of("abcdefgh", 20)
 
@@ -219,7 +214,7 @@ def main() -> None:
 
     print(f"{r2=}")
 
-    r3 = run_io(recover_with(prog2(), lambda e: "suffix error" if isinstance(e, SuffixToLong) else "prefix error"))
+    r3 = run_io(recover_with(prog2(), lambda e: "suffix error" if isinstance(e, SuffixTooLong) else "prefix error"))
 
     print(f"{r3=}")
 
