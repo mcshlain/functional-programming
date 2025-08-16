@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Callable, Never
+from typing import Any, Callable, Never, cast
 
 # -------------- #
 # Syntax as Data #
@@ -62,6 +62,24 @@ class Either[E, A]:
 
     def recover_with_either[E2, B](self, recover_either: Callable[[E], Either[E2, B]]) -> Either[E2, A | B]:
         return Either(_RecoverWithEither(self, recover_either))
+
+
+# NOTE: for this to work, error_type needs to bind first, and I don't know how to do the same as a method
+#       it would have been much cleaner if it worked as a method: mye.recover_one(SomeError, lambda e: 8)
+def recover_one[EO, EG, A, B](
+    error_type: type[EO], either: Either[EO | EG, A], f: Callable[[EO], B]
+) -> Either[EG, A | B]:
+    @eitherable
+    def _recover_one(e: EO | EG) -> EitherGen[EG, B]:
+        if isinstance(e, error_type):
+            return f(e)
+        else:
+            # NOTE: not sure why the compiler needs a cast here, but since it's internal in the framework it's
+            # not a big problem
+            x = yield from cast(Either[EG, Never], Either.error(e))
+            return x
+
+    return either.recover_with_either(_recover_one)
 
 
 def eitherable[**P, E, A](
@@ -203,6 +221,11 @@ class InternalError:
     msg: str
 
 
+@dataclass(frozen=True, slots=True)
+class Oops:
+    msg: str
+
+
 @eitherable
 def divide(a: int, b: int) -> EitherGen[DivideByZero, int]:
     if b == 0:
@@ -242,15 +265,6 @@ def prog4() -> EitherGen[Never, int | str]:
     return r
 
 
-@eitherable
-def _recover_from_internal_error_only[E](e: E | InternalError) -> EitherGen[E, int]:
-    if isinstance(e, InternalError):
-        return 0
-    else:
-        x = yield from Either.error(e)
-        return x
-
-
 def main() -> None:
     r1 = run_either(prog1())
     r2 = run_either(prog2())
@@ -261,8 +275,9 @@ def main() -> None:
     r4 = run_either(prog4())
     print(f"{r4=}")
 
-    r5 = run_either(prog2().recover_with_either(_recover_from_internal_error_only))
-    r6 = run_either(prog3().recover_with_either(_recover_from_internal_error_only))
+    # NOTE: onion syntax is not ideal but it's still nicer than having to define the _recover_from_internal_error_only
+    r5 = run_either(recover_one(InternalError, prog2(), lambda e: 0))
+    r6 = run_either(recover_one(DivideByZero, recover_one(InternalError, prog3(), lambda e: 0), lambda e: 6))
     print(f"{r5=} {r6=}")
 
 
