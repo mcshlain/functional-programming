@@ -66,6 +66,8 @@ class Either[E, A]:
 
 # NOTE: for this to work, error_type needs to bind first, and I don't know how to do the same as a method
 #       it would have been much cleaner if it worked as a method: mye.recover_one(SomeError, lambda e: 8)
+# NOTE: you can read why the casting inside this funciton is needed:
+#       https://github.com/microsoft/pyright/discussions/10652
 def recover_one[EO, EG, A, B](
     error_type: type[EO], either: Either[EO | EG, A], f: Callable[[EO], B]
 ) -> Either[EG, A | B]:
@@ -74,8 +76,6 @@ def recover_one[EO, EG, A, B](
         if isinstance(e, error_type):
             return f(e)
         else:
-            # NOTE: not sure why the compiler needs a cast here, but since it's internal in the framework it's
-            # not a big problem
             x = yield from cast(Either[EG, Never], Either.error(e))
             return x
 
