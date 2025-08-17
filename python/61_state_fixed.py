@@ -4,6 +4,10 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+# -------------- #
+# Syntax as Data #
+# -------------- #
+
 
 @dataclass(frozen=True, slots=True)
 class GetState:
@@ -13,6 +17,11 @@ class GetState:
 @dataclass(frozen=True, slots=True)
 class SetState:
     state: Any
+
+
+# -------------- #
+# The State Type #
+# -------------- #
 
 
 class Updatable(Protocol):

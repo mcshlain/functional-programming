@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Callable, Never, cast
+from typing import Any, Callable, Never
 
 # -------------- #
 # Syntax as Data #

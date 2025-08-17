@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from dataclasses import dataclass
-from types import TracebackType
-from typing import Any, Callable
+from typing import Any
+
+# -------------- #
+# Syntax as Data #
+# -------------- #
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +19,10 @@ class SetState:
     state: Any
 
 
+# -------------- #
+# The State Type #
+# -------------- #
+
 type StateYield = SetState | GetState
 type StateSend[S] = S | None
 type State[S, A] = Generator[StateYield, StateSend[S], A]
@@ -24,6 +31,7 @@ type State[S, A] = Generator[StateYield, StateSend[S], A]
 # --------------- #
 # Basic Operation #
 # --------------- #
+
 def set_state[S](state: S) -> State[S, None]:
     yield SetState(state)
 
@@ -37,7 +45,6 @@ def get_state[S](state_type: type[S]) -> State[S, S]:
 # ----------- #
 # Interpreter #
 # ----------- #
-
 
 def run_state[S, A](et: State[S, A], initial_state: S) -> tuple[A, S]:
     internal_state: S = initial_state

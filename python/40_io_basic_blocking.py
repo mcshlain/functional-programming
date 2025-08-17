@@ -36,9 +36,9 @@ class ExitInPlace:
     error: Any
 
 
-# ---------------- #
-# They Either Type #
-# ---------------- #
+# ----------- #
+# The IO Type #
+# ----------- #
 
 type IOYield[E] = StopFromError[E] | Gather | Sleep
 type IOSend = Any | ExitInPlace
