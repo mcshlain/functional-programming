@@ -231,7 +231,7 @@ def save_two_numbers(x: int, y: int) -> IO[OutOfSpace, tuple[UUID, UUID], StateD
 
 def get_number_or_else(uuid: UUID, /, default: int) -> IO[Never, int, StateDao]:
     state_dao = yield from get_dependency(StateDao)
-    r = yield from recover_with(state_dao.get_number(uuid), lambda e: default)
+    r = yield from recover_with(state_dao.get_number(uuid), lambda _: default)
     return r
 
 

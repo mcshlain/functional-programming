@@ -64,24 +64,6 @@ class Either[E, A]:
         return Either(_RecoverWithEither(self, recover_either))
 
 
-# NOTE: for this to work, error_type needs to bind first, and I don't know how to do the same as a method
-#       it would have been much cleaner if it worked as a method: mye.recover_one(SomeError, lambda e: 8)
-# NOTE: you can read why the casting inside this funciton is needed:
-#       https://github.com/microsoft/pyright/discussions/10652
-def recover_one[EO, EG, A, B](
-    error_type: type[EO], either: Either[EO | EG, A], f: Callable[[EO], B]
-) -> Either[EG, A | B]:
-    @eitherable
-    def _recover_one(e: EO | EG) -> EitherGen[EG, B]:
-        if isinstance(e, error_type):
-            return f(e)
-        else:
-            x = yield from cast(Either[EG, Never], Either.error(e))
-            return x
-
-    return either.recover_with_either(_recover_one)
-
-
 def eitherable[**P, E, A](
     f: Callable[P, EitherGen[E, A]],
 ) -> Callable[P, Either[E, A]]:
@@ -265,6 +247,15 @@ def prog4() -> EitherGen[Never, int | str]:
     return r
 
 
+@eitherable
+def _recover_from_internal_error_only[E](e: E | InternalError) -> EitherGen[E, int]:
+    if isinstance(e, InternalError):
+        return 0
+    else:
+        x = yield from Either.error(e)
+        return x
+
+
 def main() -> None:
     r1 = run_either(prog1())
     r2 = run_either(prog2())
@@ -275,9 +266,8 @@ def main() -> None:
     r4 = run_either(prog4())
     print(f"{r4=}")
 
-    # NOTE: onion syntax is not ideal but it's still nicer than having to define the _recover_from_internal_error_only
-    r5 = run_either(recover_one(InternalError, prog2(), lambda e: 0))
-    r6 = run_either(recover_one(DivideByZero, recover_one(InternalError, prog3(), lambda e: 0), lambda e: 6))
+    r5 = run_either(prog2().recover_with_either(_recover_from_internal_error_only))
+    r6 = run_either(prog3().recover_with_either(_recover_from_internal_error_only))
     print(f"{r5=} {r6=}")
 
 
