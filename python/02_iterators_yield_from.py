@@ -14,6 +14,8 @@ def list_iterator[A](lst: list[A]) -> Iterator[A]:
         yield lst[i]
 
 
+# NOTE:: combined type is correctly combining all the possible yielded
+#        value
 def combined_iterator() -> Iterator[int | str | float]:
     yield from range_iterator(3, 7)
     yield from list_iterator(["a", "b", "c"])
