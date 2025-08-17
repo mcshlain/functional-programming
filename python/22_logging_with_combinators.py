@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Callable, Literal
 
+from typing_extensions import override
+
 # -------------- #
 # Syntax as Data #
 # -------------- #
@@ -119,6 +121,7 @@ class _CombinatorBase[A](ABC):
 
 @dataclass(frozen=True, slots=True)
 class _MuteLogging[A](_CombinatorBase[A]):
+    @override
     def send(self, value: LoggingSend) -> LoggingYield:
         v = self.decorated.send(value)
         if isinstance(v, LogMessage):
@@ -128,11 +131,10 @@ class _MuteLogging[A](_CombinatorBase[A]):
 
 @dataclass(frozen=True, slots=True)
 class _TransformSeverity[A](_CombinatorBase[A]):
-    decorated: LoggingGen[A]
     from_severity: Severity
     to_severity: Severity
 
-    # generator protocol
+    @override
     def send(self, value: LoggingSend) -> LoggingYield:
         v = self.decorated.send(value)
         if isinstance(v, LogMessage) and v.severity == self.from_severity:
