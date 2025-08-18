@@ -141,17 +141,17 @@ class _ProvideDep[E, A, D, DS]:
     dep_type: type[D]
     dep: D
     decorated: IO[E, A, D | DS]
-    provide_next: bool = False
+    hijack_next_send: bool = False
 
     # generator protocol
     def send(self, value: IOSend) -> IOYield[E, DS]:
-        if self.provide_next:
+        if self.hijack_next_send:
             self.decorated.send(self.dep)
-            self.provide_next = False
+            self.hijack_next_send = False
 
         v = self.decorated.send(value)
         if isinstance(v, RequestDependency) and v.dep_type == self.dep_type:
-            self.provide_next = True
+            self.hijack_next_send = True
             return Nop()
         return cast(IOYield[E, DS], v)
 
