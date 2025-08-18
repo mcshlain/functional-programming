@@ -68,7 +68,7 @@ def pure[A](value: A) -> IO[Never, A, Never]:
 
 
 # NOTE: Need many overloads to get type safe return value
-def gather[E](sub_tasks: Sequence[IO[E, Any, Any]]) -> IO[E, Sequence[Any], Any]:
+def gather[E](sub_tasks: Sequence[IO[E, Any, Any]]) -> IO[E, Sequence[Any], Never]:
     r = yield Gather(sub_tasks)
     if isinstance(r, ExitInPlace):
         yield from halt_with_error(r.error)
@@ -136,7 +136,7 @@ def recover_with[E, A, B, D](either: IO[E, A, D], recover: Callable[[E], B]) -> 
 
 
 class DependencyResolver[D]:
-    def resolve_dependendcy(self, d: type[D]) -> Any: ...
+    def resolve_dependendcy(self, d: type[D]) -> D: ...
 
 
 def run_io[E, A, D](exp: IO[E, A, D], dep_resolver: DependencyResolver[D]) -> A | StopFromError[E]:

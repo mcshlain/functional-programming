@@ -189,7 +189,7 @@ def suffix_of(s: str, /, length: int) -> IO[SuffixTooLong, str]:
         return s[len(s) - length :]
 
 
-def prog1() -> IO[PrefixTooLong | SuffixTooLong, int]:
+def prog1() -> IO[PrefixTooLong | SuffixTooLong, str]:
     st1 = prefix_of("abcdefgh", 4)
     st2 = suffix_of("abcdefgh", 2)
 
@@ -197,7 +197,7 @@ def prog1() -> IO[PrefixTooLong | SuffixTooLong, int]:
     return r1 + r2
 
 
-def prog2() -> IO[PrefixTooLong | SuffixTooLong, int]:
+def prog2() -> IO[PrefixTooLong | SuffixTooLong, str]:
     st1 = prefix_of("abcdefgh", 4)
     st2 = suffix_of("abcdefgh", 20)
 

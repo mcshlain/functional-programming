@@ -31,7 +31,7 @@ type Either[E, A] = Generator[EitherYield[E], EitherSend, A]
 def halt_with_error[E](error: E) -> Either[E, Never]:
     yield StopFromError(error)
     # NOTE: unreachable raise (based on interpreter impl, needed to avoid interpreter thinking we return a None)
-    raise
+    raise AssertionError("You implemented the interpreter wrong")
 
 
 def pure[A](value: A) -> Either[Never, A]:

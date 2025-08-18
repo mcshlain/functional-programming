@@ -146,14 +146,15 @@ class _ProvideDep[E, A, D, DS]:
     # generator protocol
     def send(self, value: IOSend) -> IOYield[E, DS]:
         if self.hijack_next_send:
-            self.decorated.send(self.dep)
+            v = self.decorated.send(self.dep)
             self.hijack_next_send = False
-
-        v = self.decorated.send(value)
-        if isinstance(v, RequestDependency) and v.dep_type == self.dep_type:
-            self.hijack_next_send = True
-            return Nop()
-        return cast(IOYield[E, DS], v)
+            return cast(IOYield[E, DS], v)
+        else:
+            v = self.decorated.send(value)
+            if isinstance(v, RequestDependency) and v.dep_type == self.dep_type:
+                self.hijack_next_send = True
+                return Nop()
+            return cast(IOYield[E, DS], v)
 
     def throw(
         self,

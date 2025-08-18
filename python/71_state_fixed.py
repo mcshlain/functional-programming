@@ -108,11 +108,11 @@ def prog2() -> State[ContainerB, int]:
 
 @dataclass
 class ContainerAB(ContainerA, ContainerB):
-    def __lshift__(self, other: Updatable) -> None:
+    def update(self, other: Updatable) -> None:
         if isinstance(other, ContainerA):
-            self.value_int = other.value_int
+            ContainerA.update(self, other)
         if isinstance(other, ContainerB):
-            self.value_str = other.value_str
+            ContainerB.update(self, other)
 
 
 def prog3() -> State[ContainerAB, ContainerA]:
